@@ -36,6 +36,7 @@ Add-Type @"
 
 using System;
 using System.Runtime.InteropServices;
+using System.Text;
 
     public class Win32 {
 
@@ -93,7 +94,7 @@ using System.Runtime.InteropServices;
             SW_SHOWNA = 8, 
             SW_RESTORE = 9, 
             SW_SHOWDEFAULT = 10, 
-            SW_MAX = 10 ;
+            SW_MAX = 10;
 
         public static readonly uint
             WS_POPUP = 0x80000000,
@@ -136,7 +137,25 @@ using System.Runtime.InteropServices;
         }
 
         [DllImport("user32.dll")] 
-        public static extern bool ShowWindowAsync(IntPtr hWnd, int nCmdShow); 
+        public static extern bool ShowWindowAsync(IntPtr hWnd, int nCmdShow);
+
+        public enum EXTENDED_NAME_FORMAT
+        {
+            NameUnknown = 0,
+            NameFullyQualifiedDN = 1,
+            NameSamCompatible = 2,
+            NameDisplay = 3,
+            NameUniqueId = 6,
+            NameCanonical = 7,
+            NameUserPrincipal = 8,
+            NameCanonicalEx = 9,
+            NameServicePrincipal = 10,
+            NameDnsDomain = 12
+        }
+
+        [DllImport("secur32.dll", CharSet=CharSet.Auto, SetLastError=true)]
+        [return: MarshalAs(UnmanagedType.I4)]
+        public static extern int GetUserNameEx (EXTENDED_NAME_FORMAT nameFormat, StringBuilder userName, ref uint userNameSize);
     }
 "@
 
@@ -209,6 +228,15 @@ function closeTab {
 }
 
 
+#a stream of bummers drove a little extra code complexity here...
+#$objShell.Explore($env:USERPROFILE) yields a window title with the user's "display" name vs their USERPROFILE/"account" name but we have to locate the window handle by title...hmmm
+#Start-Process makes a easy to find title but all forms i tried were creating new explorer.exe processes which seemed like overkill...
+#  e.g. Start-Process -FilePath "explorer.exe" -ArgumentList "$env:USERPROFILE"
+#System.DirectoryServices.AccountManagement.UserPrincipal.Current.DisplayName would allow us to find window, but .Current was taking 5 seconds?!? presumably to timeout on finding a DC (on a non domain PC? braindead MS??)...
+#so found the GetUserNameEx Win32API approach
+$userDisplayName = New-Object System.Text.StringBuilder -ArgumentList 1024
+[Win32]::GetUserNameEx([int][Win32+EXTENDED_NAME_FORMAT]::NameDisplay, $userDisplayName, [ref] $userDisplayName.Capacity) | Out-Null #nugget: embedded C# enum syntax
+
 function newFileExTab {
   param([bool]$leftSide)
 
@@ -219,13 +247,15 @@ function newFileExTab {
   $tabContainer.TabPages.Add($tabPage)
   $tabContainer.SelectedIndex = $tabContainer.TabCount-1
 
-  #$objShell.Explore($env:USERPROFILE) #this could yield a window title with the users's "alias" different than their actual account name and we have to locate the window handle by title
-  Start-Process -FilePath "explorer" -ArgumentList "$env:USERPROFILE"
+  #launch a new file explorer with a known path, which drives a known window title we can lock in on and manipulate further
+  $objShell.Explore($env:USERPROFILE)
+
   # if these windows class lookups change over Win.next, WinSpy tool is our friend:
   # http://www.catch22.net/software/winspy-17
-  do { $hwnd = [Win32]::FindWindow("CabinetWClass", $env:USERNAME) } while ( $hwnd -eq 0 )
+  do { $hwnd = [Win32]::FindWindow("CabinetWClass", [string]$userDisplayName) } while ( $hwnd -eq 0 )
   #snag and save the individual "Window" interface (SHDocVw.InternetExplorer) for each of our File Explorers - to be used later for pulling the currently selected items in the CopyFile code
   do { $shDocVw = $shellWindows | ?{$_.HWND -eq $hwnd} } while ( !$shDocVw ) #my quick testing showed this would cycle 8 to 12 times before quiescing to a value
+  
   # good 'ol Win32 SetParent()
   # i know it's silly but actually trying this right here with our old friend explorer.exe has been haunting me literally for years
   [Win32]::SetParent($hwnd, $tabPage.Handle) | Out-Null
