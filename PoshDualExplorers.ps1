@@ -146,7 +146,7 @@ $poShConsoleHwnd = (Get-Process -Id $pid).MainWindowHandle
 function showPoShConsole {
   param([bool]$show = $true)
   
-  [System.Windows.Forms.MessageBox]::Show($poShConsoleHwnd) | Out-Null
+  #[System.Windows.Forms.MessageBox]::Show($poShConsoleHwnd) | Out-Null
   [Win32]::ShowWindowAsync($poShConsoleHwnd, @([Win32]::SW_HIDE, [Win32]::SW_SHOWNORMAL)[$show]) | Out-Null
 }
 
@@ -155,33 +155,29 @@ showPoShConsole $false
 # http://www.codeproject.com/Articles/101367/Code-to-Host-a-Third-Party-Application-in-our-Proc
 $splitContainer_Resize =
 {
-  Try {
-    $tab = $tabContainerLeft.SelectedTab
-    [Win32]::SetWindowPos(
-      $tab.Tag.Hwnd,
-      [Win32]::HWND_TOP,
-      $tab.ClientRectangle.Left,
-      $tab.ClientRectangle.Top,
-      $tab.ClientRectangle.Width,
-      $tab.ClientRectangle.Height,
-      [Win32]::NOACTIVATE -bor [Win32]::SHOWWINDOW
-    ) | Out-Null
-  }
-  Catch {}
+  if (!$tabContainerLeft -or !$tabContainerLeft.SelectedTab -or !$tabContainerLeft.SelectedTab.Tag.Hwnd) { return }
+  $tab = $tabContainerLeft.SelectedTab
+  [Win32]::SetWindowPos(
+    $tab.Tag.Hwnd,
+    [Win32]::HWND_TOP,
+    $tab.ClientRectangle.Left,
+    $tab.ClientRectangle.Top,
+    $tab.ClientRectangle.Width,
+    $tab.ClientRectangle.Height,
+    [Win32]::NOACTIVATE -bor [Win32]::SHOWWINDOW
+  ) | Out-Null
 
-  Try {
-    $tab = $tabContainerRight.SelectedTab
-    [Win32]::SetWindowPos(
-      $tab.Tag.Hwnd,
-      [Win32]::HWND_TOP,
-      $tab.ClientRectangle.Left,
-      $tab.ClientRectangle.Top,
-      $tab.ClientRectangle.Width,
-      $tab.ClientRectangle.Height,
-      [Win32]::NOACTIVATE -bor [Win32]::SHOWWINDOW
-    ) | Out-Null
-  }
-  Catch {}
+  if (!$tabContainerRight -or !$tabContainerRight.SelectedTab -or !$tabContainerRight.SelectedTab.Tag.Hwnd) { return }
+  $tab = $tabContainerRight.SelectedTab
+  [Win32]::SetWindowPos(
+    $tab.Tag.Hwnd,
+    [Win32]::HWND_TOP,
+    $tab.ClientRectangle.Left,
+    $tab.ClientRectangle.Top,
+    $tab.ClientRectangle.Width,
+    $tab.ClientRectangle.Height,
+    [Win32]::NOACTIVATE -bor [Win32]::SHOWWINDOW
+  ) | Out-Null
 }
 
 function createButton {
