@@ -124,7 +124,6 @@ using System.Runtime.InteropServices;
 # http://www.codeproject.com/Articles/101367/Code-to-Host-a-Third-Party-Application-in-our-Proc
 $splitContainer_Resize =
 {
-
   Try {
     $tab = $tabContainerLeft.SelectedTab
     [Win32]::SetWindowPos(
@@ -180,10 +179,10 @@ function newFileExTab {
   param([bool]$leftSide)
 
   $tabPage = New-Object System.Windows.Forms.TabPage
-  $tabPage.Text = "whatToPut"
   $tabContainer = @($tabContainerRight, $tabContainerLeft)[$leftSide]
+  $tabPage.Text = "Tab" + ($tabContainer.TabCount + 1)
   $tabContainer.TabPages.Add($tabPage)
-  $tabContainer.SelectedIndex = $tabContainerLeft.TabCount-1
+  $tabContainer.SelectedIndex = $tabContainer.TabCount-1
 
   #$objShell.Explore($env:USERPROFILE) #this could yield a window title with the users's "alias" different than their actual account name and we have to locate the window handle by title
   Start-Process -FilePath "explorer" -ArgumentList "$env:USERPROFILE"
@@ -197,7 +196,7 @@ function newFileExTab {
   [Win32]::SetParent($hwnd, $tabPage.Handle) | Out-Null
   [Win32]::HideTitleBar($hwnd)
 
-  $tabPage.Tag = New-Object –TypeName PSObject -Property @{ShDocVw=$shDocVw; Hwnd=$hwnd}
+  $tabPage.Tag = New-Object –TypeName PSObject -Property @{ ShDocVw=$shDocVw; Hwnd=$hwnd }
 
   $splitContainer_Resize.Invoke()
 }
