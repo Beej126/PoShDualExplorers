@@ -77,7 +77,23 @@ using System.Runtime.InteropServices;
             SWP_NOSIZE = 0x1,
             SWP_FRAMECHANGED = 0x20,
             MF_BYPOSITION = 0x400,
-            MF_REMOVE = 0x1000;
+            MF_REMOVE = 0x1000,
+            
+            // Values for ShowWindowAsync(nCmdShow)
+            SW_HIDE = 0, 
+            SW_SHOWNORMAL = 1, 
+            SW_NORMAL = 1, 
+            SW_SHOWMINIMIZED = 2, 
+            SW_SHOWMAXIMIZED = 3, 
+            SW_MAXIMIZE = 3, 
+            SW_SHOWNOACTIVATE = 4, 
+            SW_SHOW = 5, 
+            SW_MINIMIZE = 6, 
+            SW_SHOWMINNOACTIVE = 7, 
+            SW_SHOWNA = 8, 
+            SW_RESTORE = 9, 
+            SW_SHOWDEFAULT = 10, 
+            SW_MAX = 10 ;
 
         public static readonly uint
             WS_POPUP = 0x80000000,
@@ -118,8 +134,23 @@ using System.Runtime.InteropServices;
             style = style & ~WS_MAXIMIZEBOX;
             SetWindowLong(hWnd, GWL_STYLE, style);
         }
+
+        [DllImport("user32.dll")] 
+        public static extern bool ShowWindowAsync(IntPtr hWnd, int nCmdShow); 
     }
 "@
+
+#nugget: don't use -WindowStyle Hidden on the ps1 shortcut, it prevents retrieval of main MainWindowHandle here...
+#save MainWindowHandle so we can hide explicitly here and be available to show at end for troubleshooting IIF PowerShell errors were emitted
+$poShConsoleHwnd = (Get-Process -Id $pid).MainWindowHandle
+function showPoShConsole {
+  param([bool]$show = $true)
+  
+  [System.Windows.Forms.MessageBox]::Show($poShConsoleHwnd) | Out-Null
+  [Win32]::ShowWindowAsync($poShConsoleHwnd, @([Win32]::SW_HIDE, [Win32]::SW_SHOWNORMAL)[$show]) | Out-Null
+}
+
+showPoShConsole $false
 
 # http://www.codeproject.com/Articles/101367/Code-to-Host-a-Third-Party-Application-in-our-Proc
 $splitContainer_Resize =
@@ -174,6 +205,13 @@ function createButton {
   return $faButton
 }
 
+function closeTab {
+  param([System.Windows.Forms.TabPage]$tabPage)
+
+  [Win32]::SendMessage($tabPage.Tag.Hwnd, [Win32]::WM_SYSCOMMAND, [Win32]::SC_CLOSE, 0) | Out-Null
+  $tabPage.Tag.TabControl.TabPages.Remove($tabPage)
+}
+
 
 function newFileExTab {
   param([bool]$leftSide)
@@ -181,6 +219,7 @@ function newFileExTab {
   $tabPage = New-Object System.Windows.Forms.TabPage
   $tabContainer = @($tabContainerRight, $tabContainerLeft)[$leftSide]
   $tabPage.Text = "Tab" + ($tabContainer.TabCount + 1)
+
   $tabContainer.TabPages.Add($tabPage)
   $tabContainer.SelectedIndex = $tabContainer.TabCount-1
 
@@ -196,7 +235,7 @@ function newFileExTab {
   [Win32]::SetParent($hwnd, $tabPage.Handle) | Out-Null
   [Win32]::HideTitleBar($hwnd)
 
-  $tabPage.Tag = New-Object –TypeName PSObject -Property @{ ShDocVw=$shDocVw; Hwnd=$hwnd }
+  $tabPage.Tag = New-Object –TypeName PSObject -Property @{ ShDocVw=$shDocVw; Hwnd=$hwnd; TabControl=$tabContainer }
 
   $splitContainer_Resize.Invoke()
 }
@@ -256,10 +295,12 @@ $splitContainer.Add_SplitterMoved($splitContainer_Resize)
 
 $tabContainerLeft = new-object System.Windows.Forms.TabControl
 $tabContainerLeft.Dock = "fill"
+$tabContainerLeft.Add_DoubleClick({ closeTab $tabContainerLeft.SelectedTab }) #nugget: doubleClick on the TabPage header actually registers on the TabControl vs the TabPage
 $splitContainer.Panel1.Controls.Add($tabContainerLeft)
 
 $tabContainerRight = new-object System.Windows.Forms.TabControl
 $tabContainerRight.Dock = "fill"
+$tabContainerRight.Add_DoubleClick({ closeTab $tabContainerRight.SelectedTab })
 $splitContainer.Panel2.Controls.Add($tabContainerRight)
 
 $frmMain = New-Object System.Windows.Forms.Form
@@ -310,11 +351,14 @@ $frmMain.Add_KeyDown({
   }
 })
 
+#nugget: doubleClick in the blank area next to tab headers actually registers on the underlying control vs the TabControl
 $splitContainer.Panel1.Add_DoubleClick({ newFileExTab $true })
 $splitContainer.Panel2.Add_DoubleClick({ newFileExTab $false })
 
 $frmMain.add_FormClosing({
-  $tabContainerLeft.TabPages | %{ [Win32]::SendMessage($_.Tag.Hwnd, [Win32]::WM_SYSCOMMAND, [Win32]::SC_CLOSE, 0) | Out-Null }
+  $tabContainerLeft.TabPages | %{ closeTab $_ }
 })
 
 [System.Windows.Forms.Application]::Run($frmMain)
+
+if ($Error) { showPoShConsole; pause }
