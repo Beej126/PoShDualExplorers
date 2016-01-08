@@ -349,6 +349,14 @@ $frmMain.Controls.Add($buttonPanel) | Out-Null
 newFileExTab $true
 newFileExTab $false
 
+$btn = createButton -toolTipText "Jam Right path to Left" -iconType ([FontAwesomeIcons.IconType]::LongArrowLeft) -eventHandler { (leftShell).Navigate((rightPath)) } 
+$btn.Dock = [System.Windows.Forms.DockStyle]::Left
+$buttonPanel.Controls.Add($btn)
+
+$btn = createButton -toolTipText "Jam Left path to Right" -iconType ([FontAwesomeIcons.IconType]::LongArrowRight) -eventHandler { (rightShell).Navigate((leftPath)) }
+$btn.Dock = [System.Windows.Forms.DockStyle]::Left
+$buttonPanel.Controls.Add($btn)
+
 # IWebBrowser2 interface which provides Navigate method is implemented by the "Shell Window" object we're keeping arround as "ShDocVw"
 # https://msdn.microsoft.com/en-us/library/aa752127(v=vs.85).aspx
 $btn = createButton -toolTipText "Swap Left and Right" -iconType ([FontAwesomeIcons.IconType]::Exchange) -eventHandler { $left = leftPath; (leftShell).Navigate((rightPath)); (rightShell).Navigate($left) }
@@ -359,7 +367,7 @@ $btn = createButton -toolTipText "(F6) Copy Left to Right" -iconType ([FontAweso
 $btn.Dock = [System.Windows.Forms.DockStyle]::Left
 $buttonPanel.Controls.Add($btn)
 
-$btn = createButton -toolTipText "(F5) Move Left to Right" -iconType ([FontAwesomeIcons.IconType]::Copy) -eventHandler { copyLeftToRight $true } 
+$btn = createButton -toolTipText "(F5) Move Left to Right" -iconType ([FontAwesomeIcons.IconType]::AngleDoubleRight) -eventHandler { copyLeftToRight $true } 
 $btn.Dock = [System.Windows.Forms.DockStyle]::Left
 $buttonPanel.Controls.Add($btn)
 
