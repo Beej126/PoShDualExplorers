@@ -350,7 +350,7 @@ $tabContainerRight.Add_DoubleClick({ closeTab $tabContainerRight.SelectedTab })
 $splitContainer.Panel2.Controls.Add($tabContainerRight)
 
 $frmMain = New-Object System.Windows.Forms.Form
-$frmMain.Text = "PowerShell Dual File Explorers"
+$frmMain.Text = "DuEx"
 $frmMain.KeyPreview = $true
 $frmMain.Icon = New-Object system.drawing.icon ("$PSScriptRoot\DualFileExplorers.ico")
 $frmMain.WindowState = "Maximized";
