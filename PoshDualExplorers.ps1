@@ -161,8 +161,8 @@ function leftPath { return uriToWindowsPath (leftShell).LocationUrl }
 function rightPath { return uriToWindowsPath (rightShell).LocationUrl }
 function leftSelectedItems { (leftShell).Document.SelectedItems() }
 function rightSelectedItems { (rightShell).Document.SelectedItems() }
-function leftFirstSelectedPath { $items = leftSelectedItems; if ($items.Count -gt 0) { $items.Item(0).Path } }
-function rightFirstSelectedPath { $items = rightSelectedItems; if ($items.Count -gt 0) { $items.Item(0).Path } }
+function leftFirstSelectedPath { $items = leftSelectedItems; if ($items -isnot [system.array]) { $items.Path } else { if ($items.Count -gt 0) { $items.Item(0).Path } } }
+function rightFirstSelectedPath { $items = rightSelectedItems; if ($items -isnot [system.array]) { $items.Path } else { if ($items.Count -gt 0) { $items.Item(0).Path } } }
 
 function copyLeftToRight {
   param([bool]$move)
@@ -240,6 +240,8 @@ function createButton {
 
 function hiddenState { (get-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced' ShowSuperHidden).ShowSuperHidden }
 function faHiddenState { @([Fa]::ToggleOff, [Fa]::ToggleOn)[(hiddenState)] }
+
+createButton -toolTip "Diff" -caption "Diff" -faType ([Fa]::Code) -action { &"C:\Program Files\Devart Code Compare\CodeCompare.exe" "$(leftFirstSelectedPath)" "$(rightFirstSelectedPath)" }
 
 createButton -toolTip "Show Operating System Files" -caption "Show Hidden" -faType (faHiddenState) -returnButton $true -action {
   param([System.Windows.Forms.Button]$thisButton)
