@@ -1,7 +1,7 @@
 # PoShDualExplorers
 Dueling Tabbed Windows File Explorers in PowerShell > Windows Forms
 
-![](http://4.bp.blogspot.com/-NtEZUIcuaLQ/Vo4r9rJ8x3I/AAAAAAAAR84/3SAxaVZOGas/s1600/Snap2.png)
+![](https://1.bp.blogspot.com/-6g-Qt9mZPP8/Vx6LzJUMiMI/AAAAAAAAUAU/lrnjzdHq-JQ-LfHTFMUdHK1FlgGk3dD9wCLcB/s1600/Snap7.jpg)
 
 # Features
 * multiple File Explorer tabs on each side
