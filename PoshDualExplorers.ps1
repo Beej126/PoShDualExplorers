@@ -151,7 +151,8 @@ function newFileExTab {
 function uriToWindowsPath {
   param([string]$uri)
 
-  return [uri]::UnEscapeDataString($uri).Replace("file:///", "").Replace("/", [char]92) #char92 just hides slash character from blog > google prettyprint munging
+  #interesting, local drive letter paths get extra "file:///" prefix but UNC paths just get extra "file:"
+  return [uri]::UnEscapeDataString($uri).Replace("file:///", "").Replace("file:", "").Replace("/", [char]92) #char92 just hides slash character from blog > google prettyprint munging
 }
 
 #IWebBrowser2 documentation gives several handy methods implemented on our ShDocVw object => https://msdn.microsoft.com/en-us/library/aa752127(v=vs.85).aspx
@@ -228,8 +229,8 @@ $buttonPanel.Dock = [System.Windows.Forms.DockStyle]::Top
 $frmMain.Controls.Add($splitContainer) | Out-Null
 $frmMain.Controls.Add($buttonPanel) | Out-Null
 
-newFileExTab $true
-newFileExTab $false
+newFileExTab $true $env:USERPROFILE\Downloads
+newFileExTab $false $env:USERPROFILE\Downloads
 
 function createButton {
     param([string]$toolTip, [string]$caption, [string]$faType, [System.Windows.Forms.Control]$parent, [scriptblock]$action)
@@ -241,7 +242,14 @@ function createButton {
 function hiddenState { (get-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced' ShowSuperHidden).ShowSuperHidden }
 function faHiddenState { @([Fa]::ToggleOff, [Fa]::ToggleOn)[(hiddenState)] }
 
-createButton -toolTip "Diff" -caption "Diff" -faType ([Fa]::Code) -action { &"C:\Program Files\Devart Code Compare\CodeCompare.exe" "$(leftFirstSelectedPath)" "$(rightFirstSelectedPath)" }
+createButton -toolTip "Diff" -caption "Folder/File Diff" -faType ([Fa]::Code) -action { 
+  if (leftFirstSelectedPath) {
+    &"C:\Program Files (x86)\WinMerge\WinMergeU.exe" /s /u "$(leftFirstSelectedPath)" "$(rightFirstSelectedPath)"
+  }
+  else {
+    &"C:\Program Files (x86)\WinMerge\WinMergeU.exe" /s /u "$(leftPath)" "$(rightPath)"
+  }
+}
 
 createButton -toolTip "Show Operating System Files" -caption "Show Hidden" -faType (faHiddenState) -returnButton $true -action {
   param([System.Windows.Forms.Button]$thisButton)
