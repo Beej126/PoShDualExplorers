@@ -35,14 +35,6 @@ public class Win32 {
         WM_SYSCOMMAND = 0x0112,
         SC_CLOSE = 0xF060,
 
-        WS_BORDER = 0x00800000,
-        WS_DLGFRAME = 0x00400000,
-        WS_CAPTION = WS_BORDER | WS_DLGFRAME,
-        WS_SYSMENU = 524288,
-        WS_THICKFRAME = 262144,
-        WS_MINIMIZE = 536870912,
-        WS_MAXIMIZEBOX = 65536,
-            
         SWP_NOMOVE = 0x2,
         SWP_NOSIZE = 0x1,
         SWP_FRAMECHANGED = 0x20,
@@ -65,9 +57,16 @@ public class Win32 {
         SW_SHOWDEFAULT = 10, 
         SW_MAX = 10;
 
-    public static readonly uint
+    public static readonly UInt32
         WS_POPUP = 0x80000000,
-        WS_CHILD = 0x40000000;
+        WS_CHILD = 0x40000000,
+        WS_SYSMENU = 524288,
+        WS_BORDER = 0x00800000,
+        WS_DLGFRAME = 0x00400000,
+        WS_CAPTION = WS_BORDER | WS_DLGFRAME,
+        WS_THICKFRAME = 262144,
+        WS_MINIMIZE = 536870912,
+        WS_MAXIMIZEBOX = 65536;
 
     public static readonly long
         WS_EX_DLGMODALFRAME = 0x1L;
@@ -82,14 +81,26 @@ public class Win32 {
     [DllImport("kernel32.dll")]
     public static extern uint GetLastError();
 
-    [DllImport("user32.dll")]
-    public static extern IntPtr SetParent(IntPtr hWnd,IntPtr hWndNewParent);
+    [DllImport("user32.dll", EntryPoint="SetParent")]
+    public static extern IntPtr Win32SetParent(IntPtr hWnd, IntPtr hWndNewParent);
+
+    //from: https://msdn.microsoft.com/en-us/library/windows/desktop/ms633541(v=vs.85).aspx
+    //=> "if hWndNewParent is not NULL and the window was previously a child of the desktop, you should clear the WS_POPUP style and set the WS_CHILD style before calling SetParent."
+    //from: http://stackoverflow.com/questions/9282284/setwindowlong-getwindowlong-and-32-bit-64-bit-cpus
+    public static IntPtr SetParent(IntPtr hWnd, IntPtr hWndNewParent) {
+      var result = Win32SetParent(hWnd, hWndNewParent);
+
+      if (hWndNewParent == HWND_TOP) SetWindowLong(hWnd, GWL_STYLE, GetWindowLong(hWnd, GWL_STYLE) & ~WS_CHILD );
+      else SetWindowLong(hWnd, GWL_STYLE, GetWindowLong(hWnd, GWL_STYLE) | WS_CHILD );
+
+      return result;
+    }
 
     [DllImport("user32.dll")]
-    public static extern int GetWindowLong(IntPtr hWnd, int nIndex);
+    public static extern UInt32 GetWindowLong(IntPtr hWnd, int nIndex);
 
     [DllImport("user32.dll")]
-    public static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
+    public static extern int SetWindowLong(IntPtr hWnd, int nIndex, UInt32 dwNewLong);
 
     [DllImport("user32.dll")]
     public static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
