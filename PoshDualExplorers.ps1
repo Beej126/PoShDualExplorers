@@ -91,7 +91,7 @@ $userDisplayName = New-Object System.Text.StringBuilder -ArgumentList 1024
 #ran into setwindowpos hang before wndproc message pump starts... 
 $splitContainer_Resize =
 {
-  #if (!$tabContainerLeft -or !$tabContainerLeft.SelectedTab -or !$tabContainerLeft.SelectedTab.Tag.Hwnd) { return }
+  if (!$tabContainerLeft -or !$tabContainerLeft.SelectedTab -or !$tabContainerLeft.SelectedTab.Tag.Hwnd) { return }
   $tab = $tabContainerLeft.SelectedTab
   [Win32]::SetWindowPos(
   $tab.Tag.Hwnd,
