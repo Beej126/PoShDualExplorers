@@ -9,6 +9,6 @@ The gist of this approach is an innocent hack where Explorer.exe windows are lau
 * multiple File Explorer tabs on each side
 * Copy/Move Left to Right command buttons (via [FontAwesome-WindowsForms project also on GitHub](https://github.com/denwilliams/FontAwesome-WindowsForms))
 * Flip flop Left <=> Right path with each other
-* naturally leverages any Shell extensions already available... e.g. [Link Shell Extension](http://schinagl.priv.at/nt/hardlinkshellext/linkshellextension.html), [FileMenu Tools](http://www.lopesoft.com/en/filemenutools), etc.
+* naturally leverages any Shell extensions already available... e.g. [Link Shell Extension](http://schinagl.priv.at/nt/hardlinkshellext/linkshellextension.html), [FileMenu Tools](http://www.lopesoft.com/index.php/en/products/filemenutools), etc.
 	* for example, this tool becomes my *photo filing* workspace when i download from our digicams... see [MOV to MP4 transcode script](http://www.beejblog.com/2015/11/transcode-iphone-mov-to-mp4-handbrake.html) as example "plugin"  
 * wide open potential for additional "macro" buttons scripted via PowerShell
