@@ -50,6 +50,34 @@ function showPoShConsole {
 
 showPoShConsole $false
 
+function createButton {
+  param( [string]$toolTipText, [FontAwesomeIcons.IconType]$iconType, $eventHandler )
+
+  $faButton = New-Object FontAwesomeIcons.IconButton
+  ([System.ComponentModel.ISupportInitialize]($faButton)).BeginInit()
+  $faButton.ActiveColor = [System.Drawing.Color]::Blue
+  $faButton.BackColor = [System.Drawing.Color]::LightGray
+  $faButton.BorderStyle = [System.Windows.Forms.BorderStyle]::FixedSingle
+  $faButton.IconType = $iconType
+  $faButton.InActiveColor = [System.Drawing.Color]::Black
+  #$faButton.Location = new-object System.Drawing.Point(255, 191)
+  #$faButton.Name = "iconButton4"
+  $faButton.Size = new-object System.Drawing.Size(60, 60)
+  #$faButton.TabIndex = 4
+  #$faButton.TabStop = false
+  $faButton.ToolTipText = $toolTipText
+  $faButton.Add_Click($eventHandler)
+
+  return $faButton
+}
+
+function closeTab {
+  param([System.Windows.Forms.TabPage]$tabPage)
+
+  [Win32]::SendMessage($tabPage.Tag.Hwnd, [Win32]::WM_SYSCOMMAND, [Win32]::SC_CLOSE, 0) | Out-Null
+  $tabPage.Tag.TabControl.TabPages.Remove($tabPage)
+}
+
 #a stream of bummers drove a little extra code complexity here...
 #$objShell.Explore($env:USERPROFILE) yields a window title with the user's "display" name vs their USERPROFILE/"account" name but we have to locate the window handle by title...hmmm
 #Start-Process makes a easy to find title but all forms i tried were creating new explorer.exe processes which seemed like overkill...
@@ -256,7 +284,6 @@ $frmMain.add_FormClosing({
   [Win32]::SendMessage($splitContainer.Panel1.Tag.Hwnd, [Win32]::WM_SYSCOMMAND, [Win32]::SC_CLOSE, 0) | Out-Null
   [Win32]::SendMessage($splitContainer.Panel2.Tag.Hwnd, [Win32]::WM_SYSCOMMAND, [Win32]::SC_CLOSE, 0) | Out-Null
 })
-
 
 [System.Windows.Forms.Application]::Run($frmMain)
 
