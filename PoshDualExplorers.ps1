@@ -50,82 +50,47 @@ function showPoShConsole {
 
 showPoShConsole $false
 
-# http://www.codeproject.com/Articles/101367/Code-to-Host-a-Third-Party-Application-in-our-Proc
-$splitContainer_Resize = {}
-$splitContainer_Resize2 =
-{
-  if (!$tabContainerLeft -or !$tabContainerLeft.SelectedTab -or !$tabContainerLeft.SelectedTab.Tag.Hwnd) { return }
-  $tab = $tabContainerLeft.SelectedTab
-  [Win32]::SetWindowPos(
-    $tab.Tag.Hwnd,
-    [Win32]::HWND_TOP,
-    $tab.ClientRectangle.Left,
-    $tab.ClientRectangle.Top-31, #these extra pixels hide the deadzone at top of file explorer window, maybe reserved for quick access toolbar
-    $tab.ClientRectangle.Width,
-    $tab.ClientRectangle.Height+31,
-    [Win32]::NOACTIVATE -bor [Win32]::SHOWWINDOW
-  ) | Out-Null
-
-  if (!$tabContainerRight -or !$tabContainerRight.SelectedTab -or !$tabContainerRight.SelectedTab.Tag.Hwnd) { return }
-  $tab = $tabContainerRight.SelectedTab
-  [Win32]::SetWindowPos(
-    $tab.Tag.Hwnd,
-    [Win32]::HWND_TOP,
-    $tab.ClientRectangle.Left,
-    $tab.ClientRectangle.Top-31,
-    $tab.ClientRectangle.Width,
-    $tab.ClientRectangle.Height+31,
-    [Win32]::NOACTIVATE -bor [Win32]::SHOWWINDOW
-  ) | Out-Null
-}
-
-function createButton {
-  param( [string]$toolTipText, [FontAwesomeIcons.IconType]$iconType, $eventHandler )
-
-  $faButton = New-Object FontAwesomeIcons.IconButton
-  ([System.ComponentModel.ISupportInitialize]($faButton)).BeginInit()
-  $faButton.ActiveColor = [System.Drawing.Color]::Blue
-  $faButton.BackColor = [System.Drawing.Color]::LightGray
-  $faButton.BorderStyle = [System.Windows.Forms.BorderStyle]::FixedSingle
-  $faButton.IconType = $iconType
-  $faButton.InActiveColor = [System.Drawing.Color]::Black
-  #$faButton.Location = new-object System.Drawing.Point(255, 191)
-  #$faButton.Name = "iconButton4"
-  $faButton.Size = new-object System.Drawing.Size(60, 60)
-  #$faButton.TabIndex = 4
-  #$faButton.TabStop = false
-  $faButton.ToolTipText = $toolTipText
-  $faButton.Add_Click($eventHandler)
-
-  return $faButton
-}
-
-function closeTab {
-  param([System.Windows.Forms.TabPage]$tabPage)
-
-  [Win32]::SendMessage($tabPage.Tag.Hwnd, [Win32]::WM_SYSCOMMAND, [Win32]::SC_CLOSE, 0) | Out-Null
-  $tabPage.Tag.TabControl.TabPages.Remove($tabPage)
-}
-
-
 #a stream of bummers drove a little extra code complexity here...
 #$objShell.Explore($env:USERPROFILE) yields a window title with the user's "display" name vs their USERPROFILE/"account" name but we have to locate the window handle by title...hmmm
 #Start-Process makes a easy to find title but all forms i tried were creating new explorer.exe processes which seemed like overkill...
 #  e.g. Start-Process -FilePath "explorer.exe" -ArgumentList "$env:USERPROFILE"
 #System.DirectoryServices.AccountManagement.UserPrincipal.Current.DisplayName would allow us to find window, but .Current was taking 5 seconds?!? presumably to timeout on finding a DC (on a non domain PC? braindead MS??)...
-#so found the GetUserNameEx Win32API approach
-$userDisplayName = New-Object System.Text.StringBuilder -ArgumentList 1024
-[Win32]::GetUserNameEx([int][Win32+EXTENDED_NAME_FORMAT]::NameDisplay, $userDisplayName, [ref] $userDisplayName.Capacity) | Out-Null #nugget: embedded C# enum syntax
+#so, found the GetUserNameEx Win32API approach
+#$userDisplayName = New-Object System.Text.StringBuilder -ArgumentList 1024
+#[Win32]::GetUserNameEx([int][Win32+EXTENDED_NAME_FORMAT]::NameDisplay, $userDisplayName, [ref] $userDisplayName.Capacity) | Out-Null #nugget: embedded C# enum syntax
+#GetUserNameEx has this issue: https://stackoverflow.com/questions/2990340/getting-the-full-name-of-the-current-user-returns-an-empty-string-c-c
 
-function newFileExTab {
+$userDisplayName = [System.Windows.Forms.SystemInformation]::UserName
+
+# http://www.codeproject.com/Articles/101367/Code-to-Host-a-Third-Party-Application-in-our-Proc
+#ran into setwindowpos hang before wndproc message pump starts... 
+$splitContainer_Resize =
+{
+  if (!$splitContainer.Panel1.Tag.Hwnd) { return }
+  [Win32]::SetWindowPos(
+      $splitContainer.Panel1.Tag.Hwnd,
+      [Win32]::HWND_TOP,
+      $splitContainer.Panel1.ClientRectangle.Left,
+      $splitContainer.Panel1.ClientRectangle.Top-31, #these extra pixels hide the deadzone at top of file explorer window, maybe reserved for quick access toolbar
+      $splitContainer.Panel1.ClientRectangle.Width,
+      $splitContainer.Panel1.ClientRectangle.Height+31,
+      [Win32]::NOACTIVATE -bor [Win32]::SHOWWINDOW
+  ) | Out-Null
+
+  if (!$splitContainer.Panel2.Tag.Hwnd) { return }
+  [Win32]::SetWindowPos(
+      $splitContainer.Panel2.Tag.Hwnd,
+      [Win32]::HWND_TOP,
+      $splitContainer.Panel2.ClientRectangle.Left,
+      $splitContainer.Panel2.ClientRectangle.Top-31,
+      $splitContainer.Panel2.ClientRectangle.Width,
+      $splitContainer.Panel2.ClientRectangle.Height+31,
+      [Win32]::NOACTIVATE -bor [Win32]::SHOWWINDOW
+  ) | Out-Null
+}
+
+function newFileEx {
   param([bool]$leftSide, [string]$folderPath)
-
-  $tabPage = New-Object System.Windows.Forms.TabPage
-  $tabContainer = @($tabContainerRight, $tabContainerLeft)[$leftSide]
-  $tabPage.Text = "Tab" + ($tabContainer.TabCount + 1)
-
-  $tabContainer.TabPages.Add($tabPage)
-  $tabContainer.SelectedIndex = $tabContainer.TabCount-1
 
   #launch a new file explorer with a known path, which drives a known window title we can lock in on and manipulate further
   $objShell.Explore($env:USERPROFILE)
@@ -148,13 +113,14 @@ function newFileExTab {
   while (!$shDocVw -and $tries -lt 20)
   if (!$shDocVw) {[System.Windows.Forms.MessageBox]::Show("couldn't obtain Explorer hWnd! aborting."); exit}
   
+  $container = @($splitContainer.Panel2, $splitContainer.Panel1)[$leftSide]
+
   # good 'ol Win32 SetParent()
   # i know it's silly but actually trying this right here with our old friend explorer.exe has been haunting me literally for years
-  [Win32]::SetParent($hwnd, $tabPage.Handle) | Out-Null
+  [Win32]::SetParent($hwnd, $container.Handle) | Out-Null
   [Win32]::HideTitleBar($hwnd)
 
-  $tabPage.Tag = New-Object –TypeName PSObject -Property @{ ShDocVw=$shDocVw; Hwnd=$hwnd; TabControl=$tabContainer }
-  $tabPage.Text = "Hwnd: $hwnd"
+  $container.Tag = New-Object –TypeName PSObject -Property @{ ShDocVw=$shDocVw; Hwnd=$hwnd }
 
   $splitContainer_Resize.Invoke()
 
@@ -170,8 +136,8 @@ function uriToWindowsPath {
 }
 
 #IWebBrowser2 documentation gives several handy methods implemented on our ShDocVw object => https://msdn.microsoft.com/en-us/library/aa752127(v=vs.85).aspx
-function leftShell { return $tabContainerLeft.SelectedTab.Tag.ShDocVw }
-function rightShell { return $tabContainerRight.SelectedTab.Tag.ShDocVw }
+function leftShell { return $splitContainer.Panel1.Tag.ShDocVw }
+function rightShell { return $splitContainer.Panel2.Tag.ShDocVw }
 function leftPath { return uriToWindowsPath (leftShell).LocationUrl }
 function rightPath { return uriToWindowsPath (rightShell).LocationUrl }
 function leftSelectedItems { (leftShell).Document.SelectedItems() }
@@ -213,22 +179,10 @@ $shellWindows = $objShell.Windows()
 $splitContainer = new-object System.Windows.Forms.SplitContainer
 $splitContainer.Dock = [System.Windows.Forms.DockStyle]::Fill
 $splitContainer.SplitterWidth = 20
-$splitContainer.Add_SplitterMoving($splitContainer_Resize)
-$splitContainer.Add_SplitterMoved($splitContainer_Resize)
-
-$tabContainerLeft = new-object System.Windows.Forms.TabControl
-$tabContainerLeft.Dock = "fill"
-$tabContainerLeft.Add_DoubleClick({ closeTab $tabContainerLeft.SelectedTab }) #nugget: doubleClick on the TabPage header actually registers on the TabControl vs the TabPage
-$splitContainer.Panel1.Controls.Add($tabContainerLeft)
-
-$tabContainerRight = new-object System.Windows.Forms.TabControl
-$tabContainerRight.Dock = "fill"
-$tabContainerRight.Add_DoubleClick({ closeTab $tabContainerRight.SelectedTab })
-$splitContainer.Panel2.Controls.Add($tabContainerRight)
 
 $frmMain = New-Object System.Windows.Forms.Form
 $frmMain.Text = "DuEx"
-$frmMain.Icon = New-Object system.drawing.icon ("$PSScriptRoot\DualFileExplorers.ico")
+$frmMain.Icon = New-Object system.drawing.icon ("$PSScriptRoot\PoShDualExplorers.ico")
 $frmMain.WindowState = "Maximized";
 $frmMain.Controls.Add($splitContainer)
 $frmMain.Add_Resize($splitContainer_Resize)
@@ -237,25 +191,21 @@ $splitContainer.SplitterDistance = $frmMain.ClientRectangle.Width / 2;
 #button toolbar
 #https://adminscache.wordpress.com/2014/08/03/powershell-winforms-menu/
 $buttonPanel = new-object System.Windows.Forms.Panel
-$buttonPanel.Height = 90
 $buttonPanel.Dock = [System.Windows.Forms.DockStyle]::Top
 $frmMain.Controls.Add($splitContainer) | Out-Null
 $frmMain.Controls.Add($buttonPanel) | Out-Null
 
-newFileExTab $true $env:USERPROFILE\Downloads
-newFileExTab $false $env:USERPROFILE\Downloads
-
 function createButton {
     param([string]$toolTip, [string]$caption, [string]$faType, [System.Windows.Forms.Control]$parent, [scriptblock]$action)
-    $faBtn = New-Object FaButton(65, 80, 25, $toolTip, $caption, 32, $faType, $buttonPanel);
+    $faBtn = New-Object FaButton(55, 31, $toolTip, $caption, 32, $faType, $buttonPanel);
     #nugget: GetNewClosure() *copies* current scope value into the future scope, it can't be changed in that future calling scope and come back like a true closure, but we don't need it to in this case
-    $faBtn.Button.Add_Click({ $action.Invoke($faBtn.Button) }.GetNewClosure() ) #nugget: pass pointer to wrappered button back into the action script to be able to change the icon upon state toggle
+    $faBtn.ThisButton.Add_Click({ $action.Invoke($faBtn.Button) }.GetNewClosure() ) #nugget: pass pointer to wrappered button back into the action script to be able to change the icon upon state toggle
 }
 
 function hiddenState { (get-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced' ShowSuperHidden).ShowSuperHidden }
 function faHiddenState { @([Fa]::ToggleOff, [Fa]::ToggleOn)[(hiddenState)] }
 
-createButton -toolTip "Diff" -caption "Folder/File Diff" -faType ([Fa]::Code) -action { 
+createButton -toolTip "Diff" -caption "Diff" -faType ([Fa]::Code) -action { 
   if (leftFirstSelectedPath) {
     &"C:\Program Files (x86)\WinMerge\WinMergeU.exe" /s /u "$(leftFirstSelectedPath)" "$(rightFirstSelectedPath)"
   }
@@ -282,8 +232,6 @@ createButton -toolTip "Show Operating System Files" -caption "Show Hidden" -faTy
   $thisButton.Text = (faHiddenState)
 }
 
-createButton -toolTip "Open Selected Folder New Tab RIGHT" -caption "Open Right" -faType ([Fa]::FolderO) -action { newFileExTab $false (rightFirstSelectedPath) }
-createButton -toolTip "Open Selected Folder New Tab LEFT" -caption "Open Left" -faType ([Fa]::FolderO) -action { newFileExTab $true (leftFirstSelectedPath) }
 createButton -toolTip "Show PowerShell Console" -caption "Show CLI" -faType ([Fa]::Terminal) -action { showPoShConsole }
 createButton -toolTip "Jam Right path to Left" -caption "Jam Left" -faType ([Fa]::LongArrowLeft) -action { (leftShell).Navigate((rightPath)) }
 createButton -toolTip "Jam Left path to Right" -caption "Jam Right" -faType ([Fa]::LongArrowRight) -action { (rightShell).Navigate((leftPath)) }
@@ -292,8 +240,11 @@ createButton -toolTip "Copy Left to Right" -caption "Copy" -faType ([Fa]::Copy) 
 createButton -toolTip "Move Left to Right" -caption "Move" -faType ([Fa]::AngleDoubleRight) -action { copyLeftToRight $true }
 
 $frmMain.add_Load({
-  #set the intial position of both explorers
-  $splitContainer_Resize.Invoke()
+  $splitContainer.Add_SplitterMoving($splitContainer_Resize)
+  $splitContainer.Add_SplitterMoved($splitContainer_Resize)
+
+  newFileEx $true $env:USERPROFILE\Downloads
+  newFileEx $false $env:USERPROFILE\Downloads
 
   #register global hot keys 
   #$frmMain.RegisterHotKey(1, [HotKeyForm+KeyModifier]::None, [System.Windows.Forms.Keys]::F5, { [System.Windows.Forms.MessageBox]::Show("F5 global hot key was pressed!") })
@@ -301,16 +252,12 @@ $frmMain.add_Load({
   #"F6" { copyLeftToRight $false }
 })
 
-
-#nugget: doubleClick in the blank area next to tab headers actually registers on the underlying control vs the TabControl
-$splitContainer.Panel1.Add_DoubleClick({ newFileExTab $true })
-$splitContainer.Panel2.Add_DoubleClick({ newFileExTab $false })
-
 $frmMain.add_FormClosing({
-  $tabContainerLeft.TabPages | %{ closeTab $_ }
+  [Win32]::SendMessage($splitContainer.Panel1.Tag.Hwnd, [Win32]::WM_SYSCOMMAND, [Win32]::SC_CLOSE, 0) | Out-Null
+  [Win32]::SendMessage($splitContainer.Panel2.Tag.Hwnd, [Win32]::WM_SYSCOMMAND, [Win32]::SC_CLOSE, 0) | Out-Null
 })
 
-$splitContainer_Resize = $splitContainer_Resize2 #ran into setwindowpos hang before wndproc message pump starts
+
 [System.Windows.Forms.Application]::Run($frmMain)
 
 if ($Error -and $poShConsoleHwnd -ne 0) { showPoShConsole; pause }

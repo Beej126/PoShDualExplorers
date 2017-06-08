@@ -10,25 +10,26 @@ using System.Collections.Generic;
 
 public sealed class FaButton : Panel
 {
-  public Button Button { get; private set; }
+  public Button ThisButton { get; private set; }
 
-  public FaButton(int height, int width, int labelHeight, string toolTipText, string caption, float faSize, string faType, Control parent)
+  public FaButton(int width, int labelHeight, string toolTipText, string caption, float faSize, string faType, Control parent)
   {
     Dock = DockStyle.Left;
-    Width = width; //60;
+    Width = width;
     BorderStyle = BorderStyle.FixedSingle;
 
-    Button = new Button
+    ThisButton = new Button
     {
       Dock = DockStyle.Top,
-      Height = height, //60,
+      Height = (int)faSize + 13,
       Text = faType,
-      Font = Fa.Get(faSize)
+      Font = Fa.Get(faSize),
+      TextAlign = ContentAlignment.BottomCenter
     };
 
     var toolTip = new ToolTip();
-    toolTip.SetToolTip(Button, toolTipText);
-    Controls.Add(Button);
+    toolTip.SetToolTip(ThisButton, toolTipText);
+    Controls.Add(ThisButton);
 
     var label = new Label
     {
@@ -40,6 +41,8 @@ public sealed class FaButton : Panel
     Controls.Add(label);
 
     parent.Controls.Add(this);
+
+    parent.Height = ThisButton.Height + label.Height;
   }
 
 }

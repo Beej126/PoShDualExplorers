@@ -78,6 +78,9 @@ public class Win32 {
     [DllImport("user32.dll")]
     public static extern int SendMessage(int hWnd, uint Msg, int wParam, int lParam);
 
+    [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto)]
+    public static extern bool SetWindowText(IntPtr hwnd, String lpString);
+
     [DllImport("kernel32.dll")]
     public static extern uint GetLastError();
 
