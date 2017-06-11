@@ -1,12 +1,12 @@
-@ECHO OFF
+::@ECHO OFF
 SETLOCAL
 
 ::**** xxmklink args in order left to right
 ::path of the shortcut (.lnk added as needed)
 ::path of the object represented by the shortcut
 ::argument string (use quotes with space, see below)
-::path of the working directory (for "Start in")
-::description string (shown in Shosrtcut's Properties)
+::path of the working directory (i.e. "Start in")
+::description string (shown in Shortcut's Properties)
 ::display mode (1:Normal [default], 3:Maximized, 7:Minimized)
 ::icon file [with optional icon index value n]
 
