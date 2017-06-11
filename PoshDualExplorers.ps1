@@ -209,7 +209,7 @@ function createButton {
     param([string]$toolTip, [string]$caption, [string]$faType, [System.Windows.Forms.Control]$parent, [scriptblock]$action)
     $faBtn = New-Object FaButton(55, 31, $toolTip, $caption, 32, $faType, $buttonPanel);
     #nugget: GetNewClosure() *copies* current scope value into the future scope, it can't be changed in that future calling scope and come back like a true closure, but we don't need it to in this case
-    $faBtn.ThisButton.Add_Click({ $action.Invoke($faBtn.Button) }.GetNewClosure() ) #nugget: pass pointer to wrappered button back into the action script to be able to change the icon upon state toggle
+    $faBtn.ThisButton.Add_Click({ $action.Invoke($faBtn) }.GetNewClosure() ) #nugget: pass pointer to wrappered button back into the action script to be able to change the icon upon state toggle
 }
 
 function hiddenState { (get-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced' ShowSuperHidden).ShowSuperHidden }
@@ -225,7 +225,7 @@ createButton -toolTip "Diff" -caption "Diff" -faType ([Fa]::Code) -action {
 }
 
 createButton -toolTip "Show Operating System Files" -caption "Show Hidden" -faType (faHiddenState) -returnButton $true -action {
-  param([System.Windows.Forms.Button]$thisButton)
+  param([FaButton]$thisButton)
 
   #flip the current value - we get a [bool] with the ! operator so that needs to be cast back to an [int]
   $newState = [int]!(hiddenState)
@@ -239,7 +239,7 @@ createButton -toolTip "Show Operating System Files" -caption "Show Hidden" -faTy
   (rightShell).Refresh()
 
   #update the toggle button state
-  $thisButton.Text = (faHiddenState)
+  $thisButton.FaType = (faHiddenState)
 }
 
 createButton -toolTip "Show PowerShell Console" -caption "Show CLI" -faType ([Fa]::Terminal) -action { showPoShConsole }

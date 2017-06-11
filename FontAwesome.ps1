@@ -12,6 +12,8 @@ public sealed class FaButton : Panel
 {
   public Button ThisButton { get; private set; }
 
+  public string FaType { get { return ThisButton.Text; } set { ThisButton.Text = value; } }
+
   public FaButton(int width, int labelHeight, string toolTipText, string caption, float faSize, string faType, Control parent)
   {
     Dock = DockStyle.Left;
@@ -31,6 +33,7 @@ public sealed class FaButton : Panel
     toolTip.SetToolTip(ThisButton, toolTipText);
     Controls.Add(ThisButton);
 
+    /*
     var label = new Label
     {
       Text = caption,
@@ -39,10 +42,11 @@ public sealed class FaButton : Panel
       Height = labelHeight
     };
     Controls.Add(label);
+    */
 
     parent.Controls.Add(this);
 
-    parent.Height = ThisButton.Height + label.Height;
+    parent.Height = ThisButton.Height;// + label.Height;
   }
 
 }
