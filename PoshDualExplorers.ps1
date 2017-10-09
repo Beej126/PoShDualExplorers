@@ -78,8 +78,11 @@ $splitContainer_Resize =
 
 }
 
-if ((Test-Path "$PSScriptRoot\settings.xml")) {
-  $settings = Import-Clixml "$PSScriptRoot\settings.xml"
+$settingsPath = "$env:LocalAppData\PoShDualExplorers"
+
+if ((Test-Path "$settingsPath\settings.xml")) {
+  # from: https://practical365.com/exchange-server/using-xml-settings-file-powershell-scripts/
+  $settings = Import-Clixml "$settingsPath\settings.xml"
 }
 else {
   $settings = @{}
@@ -131,10 +134,13 @@ function newFileEx {
   # if Quizo Tabs are installed, launch folders from last saved session, which will pop in as tabs
   try {
     $qs = New-Object -ComObject "QTTabBarLib.Scripting"
-    @($settings.RightFolders, $settings.LeftFolders)[$leftSide] | select -skip 1 | % { ii "$_" }
+    @($settings.RightFolders, $settings.LeftFolders)[$leftSide] | select -skip 1 | % { ii $_ }
     sleep -m 500
   } catch {}
 
+  # i know it's silly but actually getting around to try this SetParent hack for creating dual explorers has been nagging me for years
+  # had to move SetParent till after all initial launches to allow each one to "catch" it's restored last session tabs
+  [Win32]::SetParent( $hwnd, @($splitContainer.Panel2.Handle, $splitContainer.Panel1.Handle)[$leftSide] ) | Out-Null
 }
 
 
@@ -192,7 +198,7 @@ $splitContainer.SplitterWidth = 20
 
 $frmMain = New-Object System.Windows.Forms.Form
 $frmMain.Text = "DuEx"
-$frmMain.Icon = New-Object system.drawing.icon ("$PSScriptRoot\DualFileExplorers.ico")
+$frmMain.Icon = New-Object system.drawing.icon ("$PSScriptRoot\PoShDualExplorers.ico")
 $frmMain.WindowState = "Maximized";
 $frmMain.Controls.Add($splitContainer)
 $frmMain.Add_Resize($splitContainer_Resize)
@@ -257,9 +263,6 @@ createButton -toolTip "Swap Left and Right paths" -caption "Swap" -faType ([Fa]:
 createButton -toolTip "Copy Left side selected file/folder to Right" -caption "Copy" -faType ([Fa]::Copy) -action { copyLeftToRight $false }
 createButton -toolTip "Move Left side selected file/folder to Right" -caption "Move" -faType ([Fa]::AngleDoubleRight) -action { copyLeftToRight $true }
 
-# from: https://practical365.com/exchange-server/using-xml-settings-file-powershell-scripts/
-#[xml]$configFile = Get-Content "$PSScriptRoot\settings.xml"
-
 $frmMain.add_Load({
   $splitContainer.Add_SplitterMoving($splitContainer_Resize)
   $splitContainer.Add_SplitterMoved($splitContainer_Resize)
@@ -281,11 +284,6 @@ $frmMain.add_Load({
   newFileEx $true
   newFileEx $false
 
-  # i know it's silly but actually getting around to try this SetParent hack for creating dual explorers has been nagging me for years
-  # had to move SetParent till after all initial launches to allow each one to "catch" it's restored last session tabs
-  [Win32]::SetParent($splitContainer.Panel1.Tag.Hwnd, $splitContainer.Panel1.Handle) | Out-Null
-  [Win32]::SetParent($splitContainer.Panel2.Tag.Hwnd, $splitContainer.Panel2.Handle) | Out-Null
-
   $splitContainer_Resize.Invoke()
 
   #register global hot keys 
@@ -304,7 +302,8 @@ $frmMain.add_FormClosing({
     $qs = New-Object -ComObject "QTTabBarLib.Scripting" 
     $settings.LeftFolders  = [System.Array](($qs.Windows | ? { $_.Path -eq (leftPath)  } | select -first 1).Tabs | select-object -ExpandProperty Path)
     $settings.RightFolders = [System.Array](($qs.Windows | ? { $_.Path -eq (rightPath) } | select -first 1).Tabs | select-object -ExpandProperty Path)
-    $settings | Export-Clixml "$PSScriptRoot\settings.xml"
+    md -force $settingsPath > $null
+    $settings | Export-Clixml "$settingsPath\settings.xml"
   } catch {}
  
   [Win32]::SendMessage($splitContainer.Panel1.Tag.Hwnd, [Win32]::WM_SYSCOMMAND, [Win32]::SC_CLOSE, 0) | Out-Null
