@@ -38,6 +38,7 @@ Add-Type -AssemblyName System.Windows.Forms
 #nugget: don't use -WindowStyle Hidden on the ps1 shortcut, it prevents retrieval of main MainWindowHandle here...
 $process = Get-Process -Id $pid
 $poShConsoleHwnd = $process.MainWindowHandle
+echo "`$process.MainWindowHandle: $($process.MainWindowHandle)"
 if ($process.ProcessName -eq "powershell_ise") { $poShConsoleHwnd=0 }
 function showPoShConsole {
   param([bool]$show = $true)
@@ -78,11 +79,12 @@ $splitContainer_Resize =
 
 }
 
-$settingsPath = "$env:LocalAppData\PoShDualExplorers"
+$scriptPath = $(Split-Path -parent $PSCommandPath)
+$settingsPath = "$scriptPath\settings-$env:COMPUTERNAME.xml"
 
-if ((Test-Path "$settingsPath\settings.xml")) {
+if ((Test-Path $settingsPath)) {
   # from: https://practical365.com/exchange-server/using-xml-settings-file-powershell-scripts/
-  $settings = Import-Clixml "$settingsPath\settings.xml"
+  $settings = Import-Clixml $settingsPath
 }
 else {
   $settings = @{}
@@ -133,7 +135,6 @@ function newFileEx {
 
   # if Quizo Tabs are installed, launch folders from last saved session, which will pop in as tabs
   try {
-    $qs = New-Object -ComObject "QTTabBarLib.Scripting"
     @($settings.RightFolders, $settings.LeftFolders)[$leftSide] | select -skip 1 | % { ii $_ }
     sleep -m 500
   } catch {}
@@ -199,6 +200,8 @@ $splitContainer.SplitterWidth = 20
 $frmMain = New-Object System.Windows.Forms.Form
 $frmMain.Text = "DuEx"
 $frmMain.Icon = New-Object system.drawing.icon ("$PSScriptRoot\PoShDualExplorers.ico")
+$frmMain.Height = 800;
+$frmMain.Width = 800;
 $frmMain.WindowState = "Maximized";
 $frmMain.Controls.Add($splitContainer)
 $frmMain.Add_Resize($splitContainer_Resize)
@@ -302,8 +305,8 @@ $frmMain.add_FormClosing({
     $qs = New-Object -ComObject "QTTabBarLib.Scripting" 
     $settings.LeftFolders  = [System.Array](($qs.Windows | ? { $_.Path -eq (leftPath)  } | select -first 1).Tabs | select-object -ExpandProperty Path)
     $settings.RightFolders = [System.Array](($qs.Windows | ? { $_.Path -eq (rightPath) } | select -first 1).Tabs | select-object -ExpandProperty Path)
-    md -force $settingsPath > $null
-    $settings | Export-Clixml "$settingsPath\settings.xml"
+    md -force $scriptPath > $null
+    $settings | Export-Clixml $settingsPath
   } catch {}
  
   [Win32]::SendMessage($splitContainer.Panel1.Tag.Hwnd, [Win32]::WM_SYSCOMMAND, [Win32]::SC_CLOSE, 0) | Out-Null

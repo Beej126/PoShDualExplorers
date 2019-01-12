@@ -12,7 +12,7 @@ SETLOCAL
 
 set scriptName=PoshDualExplorers
 
-"%~dp0xxmklink" "%~dp0%scriptName%.lnk" PowerShell.exe "-ExecutionPolicy Bypass %~dp0%scriptName%.ps1" "" "Windows PowerShell Hot Corners" 7 "%~dp0%scriptName%.ico"
+"%~dp0xxmklink" "%~dp0%scriptName%.lnk" PowerShell.exe "-new_console:z -ExecutionPolicy Bypass .\%scriptName%.ps1" "%~dp0" "DuEx" 7 "%~dp0%scriptName%.ico"
 
 if %errorlevel% neq 0 (
   pause
