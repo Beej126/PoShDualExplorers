@@ -10,6 +10,7 @@ The gist of this approach is an innocent hack where Explorer.exe windows are lau
 * MakeShortcut.cmd script provided for your convenience as well
 
 ## Features
+* restores previously open tab folders so you return to your previous "working session" after reboots etc... i guess the older i get the more i appreciate little conveniences like this
 * ~~removed: multiple File Explorer tabs on each side~~ recommend: Quizo's awesome integrated tabs: http://qttabbar.wikidot.com/ 
 * Copy/Move Left to Right command buttons (via [FontAwesome-WindowsForms project also on GitHub](https://github.com/denwilliams/FontAwesome-WindowsForms))
 * Flip flop Left <=> Right path with each other

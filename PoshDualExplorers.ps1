@@ -226,18 +226,23 @@ function faHiddenState { @([Fa]::ToggleOff, [Fa]::ToggleOn)[(hiddenState)] }
 
 createButton -toolTip "Diff" -caption "Diff" -faType ([Fa]::Code) -action { 
   $winmergepath = "C:\Program Files (x86)\WinMerge\WinMergeU.exe"
+  $compareCLI = "$winmergepath /s /u"
+  $beyondComparePath = "C:\Program Files\Beyond Compare 4\BCompare.exe"
 
-  if (-not (Test-Path $winmergepath)) {
-    $response = [System.Windows.Forms.MessageBox]::Show("'$winmergepath' not installed", "Install WinMerge?", "YesNo")
+  if (-not (Test-Path $winmergepath) -and -not (Test-Path $beyondComparePath)) {
+    $response = [System.Windows.Forms.MessageBox]::Show("'$winmergepath' nor '$beyondComparePath' not installed.`n`nInstall Free WinMerge?", "No DIFF Tool Installed", "YesNo")
     if ($response -eq "Yes") { start "http://winmerge.org/downloads/" } 
     return
   }
+  if (Test-Path $beyondComparePath) {$compareCLI = "$beyondComparePath"}
 
+  # compare files
   if (leftFirstSelectedPath) {
-    & $winmergepath /s /u "$(leftFirstSelectedPath)" "$(rightFirstSelectedPath)"
+    & $compareCLI "$(leftFirstSelectedPath)" "$(rightFirstSelectedPath)"
   }
+  # compare folders
   else {
-    & $winmergepath /s /u "$(leftPath)" "$(rightPath)"
+    & $compareCLI "$(leftPath)" "$(rightPath)"
   }
 }
 
