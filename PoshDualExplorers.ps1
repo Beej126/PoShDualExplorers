@@ -39,11 +39,11 @@ Add-Type -AssemblyName System.Windows.Forms
 $process = Get-Process -Id $pid
 $poShConsoleHwnd = $process.MainWindowHandle
 echo "`$process.MainWindowHandle: $($process.MainWindowHandle)"
-if ($process.ProcessName -eq "powershell_ise") { $poShConsoleHwnd=0 }
+if ($process.ProcessName -eq "powershell_ise") { $poShConsoleHwnd = 0 }
 function showPoShConsole {
   param([bool]$show = $true)
   
-  if ($show -and [Win32]::IsWindowVisible($poShConsoleHwnd)) { $show=$false }
+  if ($show -and [Win32]::IsWindowVisible($poShConsoleHwnd)) { $show = $false }
 
   [Win32]::ShowWindowAsync($poShConsoleHwnd, @([Win32]::SW_HIDE, [Win32]::SW_SHOWNORMAL)[$show]) | Out-Null
   [Win32]::SetForegroundWindow($poShConsoleHwnd) | Out-Null
@@ -57,24 +57,24 @@ $splitContainer_Resize =
 {
   if (!$splitContainer.Panel1.Tag.Hwnd) { return }
   [Win32]::SetWindowPos(
-      $splitContainer.Panel1.Tag.Hwnd,
-      [Win32]::HWND_TOP,
-      $splitContainer.Panel1.ClientRectangle.Left,
-      $splitContainer.Panel1.ClientRectangle.Top-31, #these extra pixels hide the deadzone at top of file explorer window, maybe reserved for quick access toolbar
-      $splitContainer.Panel1.ClientRectangle.Width,
-      $splitContainer.Panel1.ClientRectangle.Height+31,
-      [Win32]::NOACTIVATE -bor [Win32]::SHOWWINDOW
+    $splitContainer.Panel1.Tag.Hwnd,
+    [Win32]::HWND_TOP,
+    $splitContainer.Panel1.ClientRectangle.Left,
+    $splitContainer.Panel1.ClientRectangle.Top - 31, #these extra pixels hide the deadzone at top of file explorer window, maybe reserved for quick access toolbar
+    $splitContainer.Panel1.ClientRectangle.Width,
+    $splitContainer.Panel1.ClientRectangle.Height + 31,
+    [Win32]::NOACTIVATE -bor [Win32]::SHOWWINDOW
   ) | Out-Null
 
   if (!$splitContainer.Panel2.Tag.Hwnd) { return }
   [Win32]::SetWindowPos(
-      $splitContainer.Panel2.Tag.Hwnd,
-      [Win32]::HWND_TOP,
-      $splitContainer.Panel2.ClientRectangle.Left,
-      $splitContainer.Panel2.ClientRectangle.Top-31, #these extra pixels hide the deadzone at top of file explorer window, maybe reserved for quick access toolbar
-      $splitContainer.Panel2.ClientRectangle.Width,
-      $splitContainer.Panel2.ClientRectangle.Height+31,
-      [Win32]::NOACTIVATE -bor [Win32]::SHOWWINDOW
+    $splitContainer.Panel2.Tag.Hwnd,
+    [Win32]::HWND_TOP,
+    $splitContainer.Panel2.ClientRectangle.Left,
+    $splitContainer.Panel2.ClientRectangle.Top - 31, #these extra pixels hide the deadzone at top of file explorer window, maybe reserved for quick access toolbar
+    $splitContainer.Panel2.ClientRectangle.Width,
+    $splitContainer.Panel2.ClientRectangle.Height + 31,
+    [Win32]::NOACTIVATE -bor [Win32]::SHOWWINDOW
   ) | Out-Null
 
 }
@@ -87,8 +87,8 @@ if ((Test-Path $settingsPath)) {
   $settings = Import-Clixml $settingsPath
 }
 else {
-  $settings = @{}
-  $settings.LeftFolders  = @("$env:USERPROFILE\Downloads")
+  $settings = @{ }
+  $settings.LeftFolders = @("$env:USERPROFILE\Downloads")
   $settings.RightFolders = @("$env:USERPROFILE\Downloads")
 }
 
@@ -114,21 +114,21 @@ function newFileEx {
   $tries = 0
   do {
     $tries++
-    for($idx=0; $idx -lt $shellwindows.Count; $idx++) {
+    for ($idx = 0; $idx -lt $shellwindows.Count; $idx++) {
       try {
-       if ($shellwindows.Item($idx).HWND -eq $hwnd) { $shDocVw = $shellwindows.Item($idx); break }  #$shellwindows.Item($idx) could throw exception
+        if ($shellwindows.Item($idx).HWND -eq $hwnd) { $shDocVw = $shellwindows.Item($idx); break }  #$shellwindows.Item($idx) could throw exception
       }
-      catch {}
+      catch { }
     }
   }
   while (!$shDocVw -and $tries -lt 20)
-  if (!$shDocVw) {[System.Windows.Forms.MessageBox]::Show("couldn't obtain Explorer hWnd! aborting."); exit}
+  if (!$shDocVw) { [System.Windows.Forms.MessageBox]::Show("couldn't obtain Explorer hWnd! aborting."); exit }
 
   $container = @($splitContainer.Panel2, $splitContainer.Panel1)[$leftSide]
 
   [Win32]::HideTitleBar($hwnd)
 
-  $container.Tag = New-Object –TypeName PSObject -Property @{ ShDocVw=$shDocVw; Hwnd=$hwnd }
+  $container.Tag = New-Object –TypeName PSObject -Property @{ ShDocVw = $shDocVw; Hwnd = $hwnd }
 
   # set the first tab to the first saved folder
   @((rightShell), (leftShell))[$leftSide].Navigate( (@($settings.RightFolders, $settings.LeftFolders)[$leftSide])[0] )
@@ -137,7 +137,8 @@ function newFileEx {
   try {
     @($settings.RightFolders, $settings.LeftFolders)[$leftSide] | select -skip 1 | % { ii $_ }
     sleep -m 500
-  } catch {}
+  }
+  catch { }
 
   # i know it's silly but actually getting around to try this SetParent hack for creating dual explorers has been nagging me for years
   # had to move SetParent till after all initial launches to allow each one to "catch" it's restored last session tabs
@@ -215,26 +216,33 @@ $frmMain.Controls.Add($splitContainer) | Out-Null
 $frmMain.Controls.Add($buttonPanel) | Out-Null
 
 function createButton {
-    param([string]$toolTip, [string]$caption, [string]$faType, [System.Windows.Forms.Control]$parent, [scriptblock]$action)
-    $faBtn = New-Object FaButton(55, 31, $toolTip, $caption, 32, $faType, $buttonPanel);
-    #nugget: GetNewClosure() *copies* current scope value into the future scope, it can't be changed in that future calling scope and come back like a true closure, but we don't need it to in this case
-    $faBtn.ThisButton.Add_Click({ $action.Invoke($faBtn) }.GetNewClosure() ) #nugget: pass pointer to wrappered button back into the action script to be able to change the icon upon state toggle
+  param([string]$toolTip, [string]$caption, [string]$faType, [System.Windows.Forms.Control]$parent, [scriptblock]$action)
+  $faBtn = New-Object FaButton(55, 31, $toolTip, $caption, 32, $faType, $buttonPanel);
+  #nugget: GetNewClosure() *copies* current scope value into the future scope, it can't be changed in that future calling scope and come back like a true closure, but we don't need it to in this case
+  $faBtn.ThisButton.Add_Click( { $action.Invoke($faBtn) }.GetNewClosure() ) #nugget: pass pointer to wrappered button back into the action script to be able to change the icon upon state toggle
 }
 
 function hiddenState { (get-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced' ShowSuperHidden).ShowSuperHidden }
 function faHiddenState { @([Fa]::ToggleOff, [Fa]::ToggleOn)[(hiddenState)] }
 
-createButton -toolTip "Diff" -caption "Diff" -faType ([Fa]::Code) -action { 
-  $winmergepath = "C:\Program Files (x86)\WinMerge\WinMergeU.exe"
-  $compareCLI = "$winmergepath /s /u"
-  $beyondComparePath = "C:\Program Files\Beyond Compare 4\BCompare.exe"
+@(
+  @("C:\Program Files (x86)\WinMerge\WinMergeU.exe", "/s /u"), 
+  @("C:\Program Files\Beyond Compare 4\BCompare.exe", ""),
+  @("C:\Program Files\Beyond Compare\BCompare.exe", "")
+) | % {
+  $lookedFor = $lookedFor + "`n" + $_[0]
+  if (Test-Path $_[0]) { $compareCLI = $_[0] + " " + $_[1] }
+}
 
-  if (-not (Test-Path $winmergepath) -and -not (Test-Path $beyondComparePath)) {
-    $response = [System.Windows.Forms.MessageBox]::Show("'$winmergepath' nor '$beyondComparePath' not installed.`n`nInstall Free WinMerge?", "No DIFF Tool Installed", "YesNo")
-    if ($response -eq "Yes") { start "http://winmerge.org/downloads/" } 
+createButton -toolTip "Diff" -caption "Diff" -faType ([Fa]::Code) -action { 
+  if (!$compareCLI) {
+    $response = [System.Windows.Forms.MessageBox]::Show("looked for $lookedFor. `n`nInstall Free WinMerge?", "No DIFF Tool Installed", "YesNo")
+    if ($response -eq "Yes") { 
+      start "http://winmerge.org/downloads/";
+      [System.Windows.Forms.MessageBox]::Show("you must restart DuEx after installed", "No DIFF Tool Installed", "Ok")
+     } 
     return
   }
-  if (Test-Path $beyondComparePath) {$compareCLI = "$beyondComparePath"}
 
   # compare files
   if (leftFirstSelectedPath) {
@@ -254,7 +262,7 @@ createButton -toolTip "Show Operating System Files" -caption "Show Hidden" -faTy
 
   #update the registry... keep both hiddens in sync for simplicity
   Set-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced' ShowSuperHidden $newState
-  Set-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced' Hidden @(2,1)[$newState] #hidden property needs 2 & 1 for Hide/Show vs 0 & 1 with ShowSuperHidden
+  Set-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced' Hidden @(2, 1)[$newState] #hidden property needs 2 & 1 for Hide/Show vs 0 & 1 with ShowSuperHidden
 
   #refresh both explorers to show/hide files accordingly
   (leftShell).Refresh()
@@ -271,11 +279,11 @@ createButton -toolTip "Swap Left and Right paths" -caption "Swap" -faType ([Fa]:
 createButton -toolTip "Copy Left side selected file/folder to Right" -caption "Copy" -faType ([Fa]::Copy) -action { copyLeftToRight $false }
 createButton -toolTip "Move Left side selected file/folder to Right" -caption "Move" -faType ([Fa]::AngleDoubleRight) -action { copyLeftToRight $true }
 
-$frmMain.add_Load({
-  $splitContainer.Add_SplitterMoving($splitContainer_Resize)
-  $splitContainer.Add_SplitterMoved($splitContainer_Resize)
+$frmMain.add_Load( {
+    $splitContainer.Add_SplitterMoving($splitContainer_Resize)
+    $splitContainer.Add_SplitterMoved($splitContainer_Resize)
 
-  <#
+    <#
   $qs = New-Object -ComObject "QTTabBarLib.Scripting"
 
   if (!$configFile.Settings.LeftPanel.Folder) { $f = $configFile.CreateElement("Folder"); $f.InnerText = "$env:USERPROFILE\Downloads"; $configFile.Settings.LeftPanel.AppendChild($f) }
@@ -289,34 +297,35 @@ $frmMain.add_Load({
   $configFile.Settings.RightPanel.Folder | select -skip 1 | % { ($qs.Windows | ? {$_.Path -eq "$rightFirst"} | select -First 1).Add($_) }
   #>
 
-  newFileEx $true
-  newFileEx $false
+    newFileEx $true
+    newFileEx $false
 
-  $splitContainer_Resize.Invoke()
+    $splitContainer_Resize.Invoke()
 
-  #register global hot keys 
-  #$frmMain.RegisterHotKey(1, [HotKeyForm+KeyModifier]::None, [System.Windows.Forms.Keys]::F5, { [System.Windows.Forms.MessageBox]::Show("F5 global hot key was pressed!") })
-  #"F5" { copyLeftToRight $true }
-  #"F6" { copyLeftToRight $false }
-})
+    #register global hot keys 
+    #$frmMain.RegisterHotKey(1, [HotKeyForm+KeyModifier]::None, [System.Windows.Forms.Keys]::F5, { [System.Windows.Forms.MessageBox]::Show("F5 global hot key was pressed!") })
+    #"F5" { copyLeftToRight $true }
+    #"F6" { copyLeftToRight $false }
+  })
 
 
-$frmMain.add_FormClosing({
-  [Win32]::SetParent($splitContainer.Panel1.Tag.Hwnd, 0) | Out-Null
-  [Win32]::SetParent($splitContainer.Panel2.Tag.Hwnd, 0) | Out-Null
+$frmMain.add_FormClosing( {
+    [Win32]::SetParent($splitContainer.Panel1.Tag.Hwnd, 0) | Out-Null
+    [Win32]::SetParent($splitContainer.Panel2.Tag.Hwnd, 0) | Out-Null
 
-  #save Quizo Tabs if it's installed
-  try {
-    $qs = New-Object -ComObject "QTTabBarLib.Scripting" 
-    $settings.LeftFolders  = [System.Array](($qs.Windows | ? { $_.Path -eq (leftPath)  } | select -first 1).Tabs | select-object -ExpandProperty Path)
-    $settings.RightFolders = [System.Array](($qs.Windows | ? { $_.Path -eq (rightPath) } | select -first 1).Tabs | select-object -ExpandProperty Path)
-    md -force $scriptPath > $null
-    $settings | Export-Clixml $settingsPath
-  } catch {}
+    #save Quizo Tabs if it's installed
+    try {
+      $qs = New-Object -ComObject "QTTabBarLib.Scripting" 
+      $settings.LeftFolders = [System.Array](($qs.Windows | ? { $_.Path -eq (leftPath) } | select -first 1).Tabs | select-object -ExpandProperty Path)
+      $settings.RightFolders = [System.Array](($qs.Windows | ? { $_.Path -eq (rightPath) } | select -first 1).Tabs | select-object -ExpandProperty Path)
+      md -force $scriptPath > $null
+      $settings | Export-Clixml $settingsPath
+    }
+    catch { }
  
-  [Win32]::SendMessage($splitContainer.Panel1.Tag.Hwnd, [Win32]::WM_SYSCOMMAND, [Win32]::SC_CLOSE, 0) | Out-Null
-  [Win32]::SendMessage($splitContainer.Panel2.Tag.Hwnd, [Win32]::WM_SYSCOMMAND, [Win32]::SC_CLOSE, 0) | Out-Null
-})
+    [Win32]::SendMessage($splitContainer.Panel1.Tag.Hwnd, [Win32]::WM_SYSCOMMAND, [Win32]::SC_CLOSE, 0) | Out-Null
+    [Win32]::SendMessage($splitContainer.Panel2.Tag.Hwnd, [Win32]::WM_SYSCOMMAND, [Win32]::SC_CLOSE, 0) | Out-Null
+  })
 
 
 [System.Windows.Forms.Application]::Run($frmMain)
